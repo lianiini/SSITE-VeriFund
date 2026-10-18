@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dashboard.dart';
 import 'login.dart';
-import 'dart:math' as math;
 
 // COLORS
 const Color mediumBlue = Color.fromARGB(255, 142, 177, 209);

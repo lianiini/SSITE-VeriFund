@@ -5,7 +5,7 @@ import 'add_balance.dart';
 
 void main() {
   runApp(const MyApp());
-}
+} // main
 
 // variable colors
 const Color red = Color(0xFFC72C3B);
@@ -28,9 +28,9 @@ class MyApp extends StatelessWidget {
       ),
       // main screen of the application.
       home: const DashboardScreen(),
-    );
-  }
-}
+    ); // MaterialApp
+  } // build
+} // MyApp
 
 // dashboard screen
 class DashboardScreen extends StatelessWidget {
@@ -39,52 +39,134 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 16,
+      body: Stack(
+        children: [
+          Positioned(
+            top: -10,
+            left: -30,
+            child: Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: paleBlue,
+              ),
+            ), // Container
           ),
 
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              HeaderBar(),
-              SizedBox(height: 20),
-              RemainingFundsCard(),
-              SizedBox(height: 24),
-              PieChartSection(),
-              SizedBox(height: 24),
-              IntrinsicHeight(
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 7,
-                      child: TotalFundsCard(),
-                    ),
-                    SizedBox(width: 15),
-                    Expanded(
-                      flex: 3,
-                      child: NewTransactionButton(),
-                    ),
-                  ],
-                ),
+          Positioned(
+            top: 200,
+            right: -30,
+            child: Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: mediumBlue,
               ),
-              SizedBox(height: 24),
-              LatestTransactionsSection(),
-              SizedBox(height: 24),
-            ],
+            ), // Container
+          ), // Positioned
+
+          Positioned(
+            top: 280,
+            right: -10,
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: paleBlue
+              ),
+            ), // Container
+          ), // Positioned
+
+          Positioned(
+            top: 420,
+            left: -20,
+            child: Container(
+              width: 69,
+              height: 69,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: mediumBlue,
+              ),
+            ), // Container
+          ), // Positioned
+
+          Positioned(
+            top: 387,
+            left: -10,
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: paleBlue
+              ),
+            ), // Container
           ),
-        ),
-      ),
+
+          Positioned(
+            bottom: 125,
+            right: 10,
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: paleBlue
+              ),
+            ), // Container
+          ),
+          // 3. Main screen content wrapped in SafeArea and SingleChildScrollView
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 16,
+              ),
+
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  HeaderBar(),
+                  SizedBox(height: 20),
+                  RemainingFundsCard(),
+                  SizedBox(height: 24),
+                  PieChartSection(),
+                  SizedBox(height: 24),
+                  IntrinsicHeight(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 7,
+                          child: TotalFundsCard(),
+                        ), // Expanded
+                        SizedBox(width: 15),
+                        Expanded(
+                          flex: 3,
+                          child: NewTransactionButton(),
+                        ), // Expanded
+                      ],
+                    ), // Row
+                  ), // IntrinsicHeight
+                  SizedBox(height: 24),
+                  LatestTransactionsSection(),
+                  SizedBox(height: 24),
+                ], // children of Column
+              ), // Column
+            ), // SingleChildScrollView
+          ), // SafeArea
+        ], // children of Stack
+      ), // Stack
 
       // Bottom navigation bar
       bottomNavigationBar: const BottomNavBar(
         selectedIndex: 0,
       ),
-    );
-  }
-}
+    ); // Scaffold
+  } // build
+} // DashboardScreen
 
 // 1. header bar class
 class HeaderBar extends StatelessWidget {
@@ -118,7 +200,7 @@ class HeaderBar extends StatelessWidget {
                 height: 28,
                 fit: BoxFit.cover,
               ),
-            ),
+            ), // _buildCircleIcon
             const SizedBox(width: 5),
             _buildCircleIcon(
               Image.asset(
@@ -127,7 +209,7 @@ class HeaderBar extends StatelessWidget {
                 height: 28,
                 fit: BoxFit.cover,
               ),
-            ),
+            ), // _buildCircleIcon
             const SizedBox(width: 5),
             _buildCircleIcon(
               Image.asset(
@@ -136,21 +218,21 @@ class HeaderBar extends StatelessWidget {
                 height: 28,
                 fit: BoxFit.cover,
               ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+            ), // _buildCircleIcon
+          ], // children of Row (logos)
+        ), // Row (logos)
+      ], // children of Row (HeaderBar)
+    ); // Row (HeaderBar)
+  } // build
 
   Widget _buildCircleIcon(Image image) {
     return SizedBox(
       width: 35,
       height: 35,
       child: image,
-    );
-  }
-}
+    ); // SizedBox
+  } // _buildCircleIcon
+} // HeaderBar
 
 // 2. remaining funds card class
 class RemainingFundsCard extends StatelessWidget {
@@ -213,11 +295,11 @@ class RemainingFundsCard extends StatelessWidget {
               color: darkBlue,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
+        ], // children of Column
+      ), // Column
+    ); // Container
+  } // build
+} // RemainingFundsCard
 
 // 3. pie chart and categories class
 class PieChartSection extends StatelessWidget {
@@ -227,7 +309,6 @@ class PieChartSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
-
 
       children: [
         // =====================================================
@@ -251,8 +332,8 @@ class PieChartSection extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-              color: Colors.black,
-              offset: Offset(6, 7),
+                color: Colors.black,
+                offset: Offset(6, 7),
               ),
             ],
           ),
@@ -266,9 +347,9 @@ class PieChartSection extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
               ),
-            ),
-          ),
-        ),
+            ), // Text
+          ), // Center
+        ), // Container
 
         const SizedBox(width: 40),
 
@@ -299,12 +380,12 @@ class PieChartSection extends StatelessWidget {
                 // CHANGE LATER
                 '₱ AMOUNT',
               ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+            ], // children of Column
+          ), // Column
+        ), // Expanded
+      ], // children of Row
+    ); // Row
+  } // build
 
   Widget _buildLegendRow( // category in pie chart
       Color color,
@@ -326,7 +407,7 @@ class PieChartSection extends StatelessWidget {
               style: BorderStyle.solid,
             ),
           ),
-        ),
+        ), // Container
 
         const SizedBox(width: 12),
 
@@ -356,13 +437,13 @@ class PieChartSection extends StatelessWidget {
                   color: darkBlue.withOpacity(0.7),
                 ),
               ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
+            ], // children of Column
+          ), // Column
+        ), // Expanded
+      ], // children of Row
+    ); // Row
+  } // _buildLegendRow
+} // PieChartSection
 
 // 4. total funds card class
 class TotalFundsCard extends StatelessWidget {
@@ -435,11 +516,11 @@ class TotalFundsCard extends StatelessWidget {
               color: darkBlue,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
+        ], // children of Column
+      ), // Column
+    ); // Container
+  } // build
+} // TotalFundsCard
 
 // 4.1 Make new transaction class
 class NewTransactionButton extends StatelessWidget {
@@ -478,9 +559,9 @@ class NewTransactionButton extends StatelessWidget {
                   );
                 },
                 icon: const Icon(Icons.monetization_on_rounded, size: 30, color: Colors.white),
-              ),
-            ),
-          ),
+              ), // IconButton
+            ), // Container
+          ), // Expanded
 
           const SizedBox(height: 15),
 
@@ -510,14 +591,14 @@ class NewTransactionButton extends StatelessWidget {
                   );
                 },
                 icon: const Icon(Icons.post_add_rounded, size: 30, color: Colors.white),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+              ), // IconButton
+            ), // Container
+          ), // Expanded
+        ], // children of Column
+      ), // Column
+    ); // Container
+  } // build
+} // NewTransactionButton
 
 // 5. scrollable recent transactions
 class LatestTransactionsSection extends StatelessWidget {
@@ -545,7 +626,6 @@ class LatestTransactionsSection extends StatelessWidget {
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(
-
             vertical: 8,
           ),
 
@@ -599,9 +679,9 @@ class LatestTransactionsSection extends StatelessWidget {
                 // CHANGE LATER
                 line3: '₱ TRANSACTION_3_AMOUNT',
               ),
-            ],
-          ),
-        ),
+            ], // children of Row
+          ), // Row
+        ), // SingleChildScrollView
 
         const SizedBox(height: 16),
 
@@ -612,11 +692,11 @@ class LatestTransactionsSection extends StatelessWidget {
             color: Colors.grey,
             borderRadius: BorderRadius.circular(2),
           ),
-        ),
-      ],
-    );
-  }
-}
+        ), // Container
+      ], // children of Column
+    ); // Column
+  } // build
+} // LatestTransactionsSection
 
 // individual transaction card design
 class _TransactionCard extends StatelessWidget {
@@ -698,9 +778,9 @@ class _TransactionCard extends StatelessWidget {
                     color: darkBlue,
                   ),
                 ),
-              ],
-            ),
-          ),
+              ], // children of Column
+            ), // Column
+          ), // Expanded
 
           const SizedBox(width: 6),
 
@@ -713,12 +793,12 @@ class _TransactionCard extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(4),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+          ), // Container
+        ], // children of Row
+      ), // Row
+    ); // Container
+  } // build
+} // _TransactionCard
 
 // 7. bottom navigation bar class
 class BottomNavBar extends StatelessWidget {
@@ -808,12 +888,12 @@ class BottomNavBar extends StatelessWidget {
                 // Profile screen will go here later
               },
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+          ], // children of Row
+        ), // Row
+      ), // Container
+    ); // SafeArea
+  } // build
+} // BottomNavBar
 
 // navigation icons class
 class _NavItem extends StatelessWidget {
@@ -861,8 +941,8 @@ class _NavItem extends StatelessWidget {
                   : FontWeight.w400,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
+        ], // children of Column
+      ), // Column
+    ); // GestureDetector
+  } // build
+} // _NavItem
