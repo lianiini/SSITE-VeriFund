@@ -1,185 +1,243 @@
 import 'package:flutter/material.dart';
+import 'package:ssiteverifund/profiles.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'records.dart';
-import 'add_expense.dart';
-import 'add_balance.dart';
 
-void main() {
-  runApp(const MyApp());
-} // main
-
-// variable colors
+// color values used throughout the dashboard
 const Color red = Color(0xFFC72C3B);
 const Color beige = Color.fromARGB(255, 245, 238, 221);
 const Color paleBlue = Color.fromARGB(255, 196, 216, 230);
 const Color lightBlue = Color.fromARGB(255, 166, 199, 230);
 const Color mediumBlue = Color.fromARGB(255, 142, 177, 209);
+const Color dimBlue = Color.fromARGB(255, 58, 81, 127);
 const Color darkBlue = Color.fromARGB(255, 28, 43, 72);
 
-// main app
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// formats numbers with commas and 2 decimal places (e.g., 12500.5 -> 12,500.50)
+String formatPesoNumber(double amount) {
+  final parts = amount.toStringAsFixed(2).split('.');
+  final formattedInt = parts[0].replaceAllMapped(
+    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]},',
+  );
+  return '$formattedInt.${parts[1]}';
+}
+
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: beige,
-      ),
-      // main screen of the application.
-      home: const DashboardScreen(),
-    ); // MaterialApp
-  } // build
-} // MyApp
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
 
-// dashboard screen
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+class _DashboardScreenState extends State<DashboardScreen> { // connects the dashboard to the supabase database
+  final _supabase = Supabase.instance.client;
+
+  // stores the calculated dashboard values
+  double _remainingFunds = 0.0;
+  double _totalFunds = 0.0;
+
+  Map<String, double> _categoryTotals = { // stores the total expenses for each category
+    'Event': 0.0,
+    'Supplies': 0.0,
+    'Transportation': 0.0,
+    'Food': 0.0,
+    'Others': 0.0,
+  };
+
+  List _recentTransactions = []; // stores the latest transactions retrieved from supabase
+
+  bool _isLoading = true; // tracks whether dashboard data is still being loaded
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData(); // loads dashboard information when the screen opens
+  }
+
+  Future<void> _loadDashboardData() async {
+    try { // retrieves transactions that have not been deleted
+      final txResponse = await _supabase
+          .from('transactions')
+          .select()
+          .filter('deleted_at', 'is', null)
+          .order('transaction_date', ascending: false); // arranges them by transaction date, with the newest first
+
+      // converts the database response into a list of maps
+      List allTx = List.from(txResponse);
+
+      // variables used to calculate the total funds and expenses
+      double totalInflow = 0.0;
+      double totalExpenses = 0.0;
+
+      Map<String, double> catTotals = { // initializes the expense totals for each category
+        'Events': 0.0,
+        'Supplies': 0.0,
+        'Transportation': 0.0,
+        'Food': 0.0,
+        'Others': 0.0,
+      };
+
+      for (var tx in allTx) { // checks each transaction retrieved from the database
+        final amount = (tx['amount'] as num).toDouble(); // converts the transaction amount into a double
+        final category = tx['category'] ?? '';
+
+        if (catTotals.containsKey(category)) { // adds the amount to the corresponding expense category
+          catTotals[category] = catTotals[category]! + amount;
+          totalExpenses += amount;
+        } else { // treats transactions outside the expense categories as income
+          totalInflow += amount; // examples include membership fees, profits, and initial funds
+        }
+      }
+
+      double calculatedRemaining = totalInflow - totalExpenses; // calculates the remaining balance by subtracting expenses from income
+
+      if (mounted) { // updates the dashboard only if the screen is still active
+        setState(() {
+          _totalFunds = totalInflow;
+          _remainingFunds = calculatedRemaining;
+          _categoryTotals = catTotals;
+          _recentTransactions = allTx;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) { // stops the loading indicator if an error occurs
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
-        children: [
+        children: [ // decorative circles placed around the dashboard background
           Positioned(
             top: -10,
             left: -30,
             child: Container(
               width: 110,
               height: 110,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: paleBlue,
-              ),
-            ), // Container
+              decoration: const BoxDecoration(
+                  shape: BoxShape.circle, color: paleBlue),
+            ),
           ),
-
           Positioned(
             top: 200,
             right: -30,
             child: Container(
               width: 96,
               height: 96,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: mediumBlue,
-              ),
-            ), // Container
-          ), // Positioned
-
+              decoration: const BoxDecoration(
+                  shape: BoxShape.circle, color: mediumBlue),
+            ),
+          ),
           Positioned(
             top: 280,
             right: -10,
             child: Container(
               width: 38,
               height: 38,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: paleBlue
-              ),
-            ), // Container
-          ), // Positioned
-
+              decoration: const BoxDecoration(
+                  shape: BoxShape.circle, color: paleBlue),
+            ),
+          ),
           Positioned(
             top: 420,
             left: -20,
             child: Container(
               width: 69,
               height: 69,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: mediumBlue,
-              ),
-            ), // Container
-          ), // Positioned
-
+              decoration: const BoxDecoration(
+                  shape: BoxShape.circle, color: mediumBlue),
+            ),
+          ),
           Positioned(
             top: 387,
             left: -10,
             child: Container(
               width: 38,
               height: 38,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: paleBlue
-              ),
-            ), // Container
+              decoration: const BoxDecoration(
+                  shape: BoxShape.circle, color: paleBlue),
+            ),
           ),
-
           Positioned(
             bottom: 125,
             right: 10,
             child: Container(
               width: 30,
               height: 30,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: paleBlue
-              ),
-            ), // Container
+              decoration: const BoxDecoration(
+                  shape: BoxShape.circle, color: paleBlue),
+            ),
           ),
-          // 3. Main screen content wrapped in SafeArea and SingleChildScrollView
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
+
+          SafeArea( // displays a loading indicator while retrieving dashboard data
+            child: _isLoading
+                ? const Center(
+                child: CircularProgressIndicator(color: darkBlue))
+                : RefreshIndicator( // reloads dashboard information when the user pulls down
+              onRefresh: _loadDashboardData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const HeaderBar(),
+                    const SizedBox(height: 20),
+
+                    RemainingFundsCard( // displays the remaining funds
+                        remainingFunds: _remainingFunds),
+                    const SizedBox(height: 24),
+
+                    PieChartSection(categoryTotals: _categoryTotals), // displays the expense breakdown using a pie chart
+                    const SizedBox(height: 24),
+
+                    IntrinsicHeight( // displays the total accumulated income
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 7,
+                            child: TotalFundsCard(
+                                totalFunds: _totalFunds),
+                          ),
+                          const SizedBox(width: 15),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    LatestTransactionsSection( // displays the most recent transactions
+                        transactions: _recentTransactions),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
-
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  HeaderBar(),
-                  SizedBox(height: 20),
-                  RemainingFundsCard(),
-                  SizedBox(height: 24),
-                  PieChartSection(),
-                  SizedBox(height: 24),
-                  IntrinsicHeight(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 7,
-                          child: TotalFundsCard(),
-                        ), // Expanded
-                        SizedBox(width: 15),
-                        Expanded(
-                          flex: 3,
-                          child: NewTransactionButton(),
-                        ), // Expanded
-                      ],
-                    ), // Row
-                  ), // IntrinsicHeight
-                  SizedBox(height: 24),
-                  LatestTransactionsSection(),
-                  SizedBox(height: 24),
-                ], // children of Column
-              ), // Column
-            ), // SingleChildScrollView
-          ), // SafeArea
-        ], // children of Stack
-      ), // Stack
-
-      // Bottom navigation bar
-      bottomNavigationBar: const BottomNavBar(
-        selectedIndex: 0,
+            ),
+          ),
+        ],
       ),
-    ); // Scaffold
-  } // build
-} // DashboardScreen
 
-// 1. header bar class
-class HeaderBar extends StatelessWidget {
+      bottomNavigationBar: BottomNavBar( // displays the bottom navigation and highlights the home tab
+        selectedIndex: 0,
+        onRefreshNeeded: _loadDashboardData,
+      ),
+    );
+  }
+}
+
+class HeaderBar extends StatelessWidget { // displays the application name and organization logos
   const HeaderBar({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
       children: [
-        // Organization name
-        // Application name
         const Text(
           'VeriFund',
           style: TextStyle(
@@ -189,624 +247,487 @@ class HeaderBar extends StatelessWidget {
             color: darkBlue,
           ),
         ),
-
-        // for logos
         Row(
           children: [
-            _buildCircleIcon(
-              Image.asset(
-                'lib/assets/MCC.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.cover,
-              ),
-            ), // _buildCircleIcon
+            _buildCircleIcon(Image.asset('lib/assets/MCC.png',
+                width: 28, height: 28, fit: BoxFit.cover)),
             const SizedBox(width: 5),
-            _buildCircleIcon(
-              Image.asset(
-                'lib/assets/ICS.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.cover,
-              ),
-            ), // _buildCircleIcon
+            _buildCircleIcon(Image.asset('lib/assets/ICS.png',
+                width: 28, height: 28, fit: BoxFit.cover)),
             const SizedBox(width: 5),
-            _buildCircleIcon(
-              Image.asset(
-                'lib/assets/SSITE.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.cover,
-              ),
-            ), // _buildCircleIcon
-          ], // children of Row (logos)
-        ), // Row (logos)
-      ], // children of Row (HeaderBar)
-    ); // Row (HeaderBar)
-  } // build
+            _buildCircleIcon(Image.asset('lib/assets/SSITE.png',
+                width: 28, height: 28, fit: BoxFit.cover)),
+          ],
+        ),
+      ],
+    );
+  }
 
-  Widget _buildCircleIcon(Image image) {
-    return SizedBox(
-      width: 35,
-      height: 35,
-      child: image,
-    ); // SizedBox
-  } // _buildCircleIcon
-} // HeaderBar
+  Widget _buildCircleIcon(Image image) { // places each organization logo inside a fixed-sized container
+    return SizedBox(width: 35, height: 35, child: image);
+  }
+}
 
-// 2. remaining funds card class
-class RemainingFundsCard extends StatelessWidget {
-  const RemainingFundsCard({super.key});
+class RemainingFundsCard extends StatelessWidget { // displays the current remaining balance
+  final double remainingFunds;
+  const RemainingFundsCard({super.key, required this.remainingFunds});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-
-      padding: const EdgeInsets.symmetric(
-        horizontal: 24,
-        vertical: 22,
-      ),
-
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
       decoration: BoxDecoration(
         color: lightBlue,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.black,
-          width: 3.0,
-          style: BorderStyle.solid,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black,
-            offset: Offset(6, 7),
+        border: Border.all(color: Colors.black, width: 3.0),
+        boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(6, 7))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Remaining Funds:',
+            style: TextStyle(
+                fontFamily: 'Space',
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: darkBlue),
+          ),
+          const SizedBox(height: 8),
+
+          Text( // formats the remaining balance with commas and two decimal places
+            '₱ ${formatPesoNumber(remainingFunds)}',
+            style: const TextStyle(
+                fontFamily: 'Pixelify',
+                fontSize: 40,
+                fontWeight: FontWeight.bold,
+                color: darkBlue),
           ),
         ],
       ),
+    );
+  }
+}
 
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Remaining Funds:',
-            style: TextStyle(
-              fontFamily: 'Space',
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: darkBlue,
-            ),
-          ),
-
-          SizedBox(height: 8),
-
-          // ==================================================
-          // CHANGE THIS LATER
-          // This should eventually come from:
-          //
-          // Total Funds - Total Expenses
-          // ==================================================
-
-          Text(
-            '₱ 40,000.00',
-            style: TextStyle(
-              fontFamily: 'Pixelify',
-              fontSize: 40,
-              fontWeight: FontWeight.bold,
-              color: darkBlue,
-            ),
-          ),
-        ], // children of Column
-      ), // Column
-    ); // Container
-  } // build
-} // RemainingFundsCard
-
-// 3. pie chart and categories class
-class PieChartSection extends StatelessWidget {
-  const PieChartSection({super.key});
+class PieChartSection extends StatelessWidget { // displays the expense breakdown through a pie chart and category legend
+  final Map<String, double> categoryTotals;
+  const PieChartSection({super.key, required this.categoryTotals});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) {  // retrieves the total amount for each expense category
+    final double events = categoryTotals['Events'] ?? 0.0;
+    final double supplies = categoryTotals['Supplies'] ?? 0.0;
+    final double transpo = categoryTotals['Transportation'] ?? 0.0;
+    final double food = categoryTotals['Food'] ?? 0.0;
+    final double others = categoryTotals['Others'] ?? 0.0;
+
+    final double totalExpenses = events + supplies + transpo + food + others; // calculates the combined expenses of all categories
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
-
       children: [
-        // =====================================================
-        // PIE CHART
-        // =====================================================
-        //
-        // CHANGE THIS LATER
-        // Replace this placeholder with an actual pie chart.
-        //
-        Container(
-          width: 160,
-          height: 160,
+        SizedBox(
+          width: 190,
+          height: 190,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [ // creates the black circle behind the pie chart as a shadow
+              Container(
+                width: 180,
+                height: 180,
+                margin: const EdgeInsets.only(left: 7, top: 7),
+                decoration: const BoxDecoration(
+                  color: Colors.black,
+                  shape: BoxShape.circle,
+                ),
+              ),
 
-          decoration: BoxDecoration(
-            color: darkBlue,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.black,
-              width: 3.0,
-              style: BorderStyle.solid,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black,
-                offset: Offset(6, 7),
+              Container( // creates the black outer boundary of the pie chart
+                width: 178,
+                height: 178,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.black,
+                  border: Border.all(color: Colors.black, width: 3),
+                ),
+              ),
+
+              SizedBox( // displays the pie chart with a separate slice for each category
+                width: 150,
+                height: 150,
+                child: PieChart(
+                  PieChartData(
+                    startDegreeOffset: -90.0,
+                    sectionsSpace: 0.0,
+                    centerSpaceRadius: 47,
+
+                    sections: totalExpenses == 0 // displays an empty white circle when there are no expenses
+                        ? [
+                      PieChartSectionData(
+                        color: Colors.white,
+                        value: 100,
+                        title: '',
+                        radius: 38,
+                      ),
+                    ]
+                        : [ // only displays a slice when its category has expenses
+                      if (events > 0)
+                        PieChartSectionData(
+                          color: darkBlue,
+                          value: events,
+                          title: '',
+                          radius: 38,
+                        ),
+                      if (supplies > 0)
+                        PieChartSectionData(
+                          color: dimBlue,
+                          value: supplies,
+                          title: '',
+                          radius: 38,
+                        ),
+                      if (transpo > 0)
+                        PieChartSectionData(
+                          color: mediumBlue,
+                          value: transpo,
+                          title: '',
+                          radius: 38,
+                        ),
+                      if (food > 0)
+                        PieChartSectionData(
+                          color: lightBlue,
+                          value: food,
+                          title: '',
+                          radius: 38,
+                        ),
+                      if (others > 0)
+                        PieChartSectionData(
+                          color: paleBlue,
+                          value: others,
+                          title: '',
+                          radius: 38,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              Container( // creates the center hole and displays the chart label
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: beige,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.black, width: 3.0),
+                ),
+                child: Center(
+                  child: Text(
+                    totalExpenses == 0 ? 'NO EXP' : 'EXPENSES',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'Space',
+                      color: darkBlue,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 9,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
+        ),
+        const SizedBox(width: 25),
 
-          child: const Center(
-            child: Text(
-              'PIE CHART',
-              style: TextStyle(
-                fontFamily: 'Space',
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
-            ), // Text
-          ), // Center
-        ), // Container
-
-        const SizedBox(width: 40),
-
-        // PIE CHART LEGEND
-        Expanded(
+        Expanded( // displays the category names and their corresponding expense totals
           child: Column(
             children: [
               _buildLegendRow(
-                darkBlue,
-                // CHANGE LATER
-                'CATEGORY_1',
-                // CHANGE LATER
-                '₱ AMOUNT',
-              ),
-              const SizedBox(height: 12),
+                  darkBlue, 'Events', '₱ ${formatPesoNumber(events)}'),
+              const SizedBox(height: 8),
               _buildLegendRow(
-                mediumBlue,
-                // CHANGE LATER
-                'CATEGORY_2',
-                // CHANGE LATER
-                '₱ AMOUNT',
-              ),
-              const SizedBox(height: 12),
+                  dimBlue, 'Supplies', '₱ ${formatPesoNumber(supplies)}'),
+              const SizedBox(height: 8),
               _buildLegendRow(
-                paleBlue,
-                // CHANGE LATER
-                'CATEGORY_3',
-                // CHANGE LATER
-                '₱ AMOUNT',
-              ),
-            ], // children of Column
-          ), // Column
-        ), // Expanded
-      ], // children of Row
-    ); // Row
-  } // build
+                  mediumBlue, 'Transport', '₱ ${formatPesoNumber(transpo)}'),
+              const SizedBox(height: 8),
+              _buildLegendRow(
+                  lightBlue, 'Food', '₱ ${formatPesoNumber(food)}'),
+              const SizedBox(height: 8),
+              _buildLegendRow(
+                  paleBlue, 'Others', '₱ ${formatPesoNumber(others)}'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
-  Widget _buildLegendRow( // category in pie chart
-      Color color,
-      String title,
-      String subtitle,
-      ) {
-    return Row(
+  Widget _buildLegendRow(Color color, String title, String subtitle) {
+    return Row( // creates one legend row containing a color indicator, category, and amount
       children: [
         Container(
-          width: 12,
-          height: 36,
-
+          width: 10,
+          height: 30,
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: Colors.black,
-              width: 2.0,
-              style: BorderStyle.solid,
-            ),
+            border: Border.all(color: Colors.black, width: 1.5),
           ),
-        ), // Container
-
-        const SizedBox(width: 12),
-
+        ),
+        const SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-
             children: [
               Text(
                 title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontFamily: 'Space',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: darkBlue,
-                ),
+                    fontFamily: 'Space',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: darkBlue),
               ),
-
-              const SizedBox(height: 2),
-
+              const SizedBox(height: 1),
               Text(
                 subtitle,
                 style: TextStyle(
-                  fontFamily: 'Space',
-                  fontSize: 11,
-                  fontWeight: FontWeight.w400,
-                  color: darkBlue.withOpacity(0.7),
-                ),
+                    fontFamily: 'Space',
+                    fontSize: 10,
+                    fontWeight: FontWeight.w400,
+                    color: darkBlue.withValues(alpha: 0.7)),
               ),
-            ], // children of Column
-          ), // Column
-        ), // Expanded
-      ], // children of Row
-    ); // Row
-  } // _buildLegendRow
-} // PieChartSection
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
 
-// 4. total funds card class
-class TotalFundsCard extends StatelessWidget {
-  const TotalFundsCard({super.key});
+class TotalFundsCard extends StatelessWidget { // displays the total accumulated funds added to the system
+  final double totalFunds;
+  const TotalFundsCard({super.key, required this.totalFunds});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 18,
-      ),
-
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         color: paleBlue,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.black,
-          width: 3.0,
-          style: BorderStyle.solid,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black,
-            offset: Offset(6, 7),
+        border: Border.all(color: Colors.black, width: 3.0),
+        boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(6, 7))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Total Funds:',
+            style: TextStyle(
+                fontFamily: 'Space',
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: darkBlue),
+          ),
+          const SizedBox(height: 8),
+
+          Text( // displays the total income with commas and two decimal places
+            '₱ ${formatPesoNumber(totalFunds)}',
+            style: const TextStyle(
+                fontFamily: 'Pixelify',
+                fontSize: 25,
+                fontWeight: FontWeight.bold,
+                color: darkBlue),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Total Accumulated Inflows',
+            style: TextStyle(
+                fontFamily: 'Space',
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: darkBlue),
           ),
         ],
       ),
+    );
+  }
+}
 
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-
-        children: [
-          Text(
-            'Total Funds:',
-            style: TextStyle(
-              fontFamily: 'Space',
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: darkBlue,
-            ),
-          ),
-
-          SizedBox(height: 8),
-
-          // ==================================================
-          // CHANGE THIS LATER
-          // ==================================================
-
-          Text(
-            '₱ TOTAL_FUNDS',
-            style: TextStyle(
-              fontFamily: 'Pixelify',
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: darkBlue,
-            ),
-          ),
-
-          SizedBox(height: 4),
-
-          Text(
-            'Total Allocated Budget',
-            style: TextStyle(
-              fontFamily: 'Space',
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: darkBlue,
-            ),
-          ),
-        ], // children of Column
-      ), // Column
-    ); // Container
-  } // build
-} // TotalFundsCard
-
-// 4.1 Make new transaction class
-class NewTransactionButton extends StatelessWidget {
-  const NewTransactionButton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Container( // for dagdag money
-              decoration: BoxDecoration(
-                color: mediumBlue,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(
-                  color: Colors.black,
-                  width: 3.0,
-                  style: BorderStyle.solid,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black,
-                    offset: Offset(6, 7),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const AddBalanceScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.monetization_on_rounded, size: 30, color: Colors.white),
-              ), // IconButton
-            ), // Container
-          ), // Expanded
-
-          const SizedBox(height: 15),
-
-          Expanded(
-            child: Container( // for new expense
-              decoration: BoxDecoration(
-                color: lightBlue,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(
-                  color: Colors.black,
-                  width: 3.0,
-                  style: BorderStyle.solid,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black,
-                    offset: Offset(6, 7),
-                  ),
-                ],
-              ),
-              child: IconButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const AddExpenseScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.post_add_rounded, size: 30, color: Colors.white),
-              ), // IconButton
-            ), // Container
-          ), // Expanded
-        ], // children of Column
-      ), // Column
-    ); // Container
-  } // build
-} // NewTransactionButton
-
-// 5. scrollable recent transactions
-class LatestTransactionsSection extends StatelessWidget {
-  const LatestTransactionsSection({super.key});
+class LatestTransactionsSection extends StatelessWidget { // displays the latest transactions retrieved from the database
+  final List transactions;
+  const LatestTransactionsSection({super.key, required this.transactions});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-
       children: [
         const Text(
           'Recent Transactions',
           style: TextStyle(
-            fontFamily: 'Pixelify',
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: darkBlue,
-          ),
+              fontFamily: 'Pixelify',
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: darkBlue),
         ),
-
         const SizedBox(height: 5),
 
-        // Horizontal scrolling transaction cards.
-        SingleChildScrollView(
+        transactions.isEmpty // displays a message when no transactions are available
+            ? const Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Text('No transactions recorded yet.',
+              style: TextStyle(
+                  fontFamily: 'Space', fontSize: 12, color: darkBlue)),
+        )
+            : SingleChildScrollView( // allows the user to scroll horizontally through transaction cards
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(
-            vertical: 8,
-          ),
-
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
-            children: const [
-              // =================================================
-              // TRANSACTION 1
-              // =================================================
+            children: transactions.asMap().entries.map((entry) {
+              final tx = entry.value;
 
-              _TransactionCard(
-                // CHANGE LATER
-                line1: 'TRANSACTION_1_NAME',
+              final title = tx['title']; // retrieves the transaction details
+              final category = tx['category'];
+              final amount = (tx['amount'] as num).toDouble();
+              final type = (tx['type']);
 
-                // CHANGE LATER
-                line2: 'TRANSACTION_1_CATEGORY',
+              IconData catIcon = Icons.receipt_long; // assigns an icon based on the transaction category
+              if (category == 'Events') catIcon = Icons.receipt_long;
+              if (category == 'Supplies') catIcon = Icons.inventory_2_rounded;
+              if (category == 'Transportation') catIcon = Icons.directions_bus_rounded;
+              if (category == 'Food') catIcon = Icons.fastfood_rounded;
+              if (category == 'Membership Fee') catIcon = Icons.payments_rounded;
+              if (category == 'Donation') catIcon = Icons.handshake_rounded;
+              if (category == 'Event Profit') catIcon = Icons.attach_money_rounded;
+              if (category == 'Others') catIcon = Icons.more_horiz_rounded;
 
-                // CHANGE LATER
-                line3: '₱ TRANSACTION_1_AMOUNT',
-              ),
-
-              SizedBox(width: 10),
-
-              // =================================================
-              // TRANSACTION 2
-              // =================================================
-
-              _TransactionCard(
-                // CHANGE LATER
-                line1: 'TRANSACTION_2_NAME',
-
-                // CHANGE LATER
-                line2: 'TRANSACTION_2_CATEGORY',
-
-                // CHANGE LATER
-                line3: '₱ TRANSACTION_2_AMOUNT',
-              ),
-
-              SizedBox(width: 10),
-
-              // =================================================
-              // TRANSACTION 3
-              // =================================================
-
-              _TransactionCard(
-                // CHANGE LATER
-                line1: 'TRANSACTION_3_NAME',
-
-                // CHANGE LATER
-                line2: 'TRANSACTION_3_CATEGORY',
-
-                // CHANGE LATER
-                line3: '₱ TRANSACTION_3_AMOUNT',
-              ),
-            ], // children of Row
-          ), // Row
-        ), // SingleChildScrollView
-
+              return Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: _TransactionCard( // passes the transaction details to the individual card
+                  line1: title,
+                  line2: category,
+                  line3: '₱${formatPesoNumber(amount)}',
+                  type: type,
+                  icon: catIcon,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
         const SizedBox(height: 16),
 
-        Container(
+        Container( // adds a divider below the recent transactions
           height: 4,
-
           decoration: BoxDecoration(
-            color: Colors.grey,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ), // Container
-      ], // children of Column
-    ); // Column
-  } // build
-} // LatestTransactionsSection
+              color: Colors.grey, borderRadius: BorderRadius.circular(2)),
+        ),
+      ],
+    );
+  }
+}
 
-// individual transaction card design
-class _TransactionCard extends StatelessWidget {
+
+class _TransactionCard extends StatelessWidget { // creates an individual card for each transaction
   final String line1;
   final String line2;
   final String line3;
+  final String type;
+  final IconData icon;
 
   const _TransactionCard({
     required this.line1,
     required this.line2,
     required this.line3,
+    required this.type,
+    required this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
+    final bool isExpense = type == 'expense'; // checks whether the transaction is an expense or an income
+
     return Container(
-      width: 140,
-
+      width: 150,
       padding: const EdgeInsets.all(10),
-
       decoration: BoxDecoration(
         color: lightBlue,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Colors.black,
-          width: 3.0,
-          style: BorderStyle.solid,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black,
-            offset: Offset(3, 4),
-          ),
-        ],
+        border: Border.all(color: Colors.black, width: 3.0),
+        boxShadow: const [BoxShadow(color: Colors.black, offset: Offset(3, 4))],
       ),
-
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-
               children: [
-                Text(
+                Text( // displays the transaction title
                   line1,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-
                   style: const TextStyle(
-                    fontFamily: 'Space',
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: darkBlue,
-                  ),
+                      fontFamily: 'Space',
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: darkBlue),
                 ),
 
-                Text(
+                Text( // displays the transaction category
                   line2,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-
                   style: TextStyle(
-                    fontFamily: 'Space',
-                    fontSize: 9,
-                    fontWeight: FontWeight.w500,
-                    color: mediumBlue,
-                  ),
+                      fontFamily: 'Space',
+                      fontSize: 9,
+                      fontWeight: FontWeight.w500,
+                      color: darkBlue.withValues(alpha: 0.7)),
                 ),
+                const SizedBox(height: 4),
 
-                Text(
-                  line3,
+                Text( // adds a minus sign for expenses and a plus sign for income
+                  '${isExpense ? '-' : '+'} $line3',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Space',
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: darkBlue,
+                    color: isExpense ? red : darkBlue,
                   ),
                 ),
-              ], // children of Column
-            ), // Column
-          ), // Expanded
-
+              ],
+            ),
+          ),
           const SizedBox(width: 6),
 
-          // Placeholder for transaction icon/image.
-          Container(
-            width: 32,
+          Container( // displays the icon assigned to the transaction category
+            width: 34,
             height: 37,
-
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.black, width: 1.5),
             ),
-          ), // Container
-        ], // children of Row
-      ), // Row
-    ); // Container
-  } // build
-} // _TransactionCard
+            child: Icon(icon, size: 18, color: darkBlue),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-// 7. bottom navigation bar class
-class BottomNavBar extends StatelessWidget {
+class BottomNavBar extends StatelessWidget { // creates the bottom navigation bar for moving between app screens
   final int selectedIndex;
+  final VoidCallback? onRefreshNeeded;
 
   const BottomNavBar({
     super.key,
     required this.selectedIndex,
+    this.onRefreshNeeded,
   });
 
   @override
@@ -817,86 +738,68 @@ class BottomNavBar extends StatelessWidget {
         decoration: BoxDecoration(
           color: darkBlue,
           borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(35),
-            topRight: Radius.circular(35),
-          ),
-          border: Border.all(
-            color: Colors.black,
-            width: 4.0,
-            style: BorderStyle.solid,
-          ),
+              topLeft: Radius.circular(35), topRight: Radius.circular(35)),
+          border: Border.all(color: Colors.black, width: 4.0),
         ),
-
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-
           children: [
-            // HOME
-            _NavItem(
+            _NavItem( // navigates to the dashboard
               icon: Icons.home_rounded,
               label: 'Home',
               selected: selectedIndex == 0,
-
               onTap: () {
                 if (selectedIndex != 0) {
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const DashboardScreen(),
-                    ),
+                        builder: (context) => const DashboardScreen()),
                   );
                 }
               },
             ),
 
-            // RECORDS
-            _NavItem(
+            _NavItem( // opens the transaction records screen
               icon: Icons.receipt_long_rounded,
               label: 'Records',
               selected: selectedIndex == 1,
-
-              onTap: () {
+              onTap: () async {
                 if (selectedIndex != 1) {
-                  Navigator.push(
+                  await Navigator.push( // waits until the records screen is closed
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const TransactionRecordsScreen(),
-                    ),
+                        builder: (context) => const TransactionRecordsScreen()),
                   );
+
+                  if (onRefreshNeeded != null) onRefreshNeeded!(); // refreshes the dashboard after returning from records
                 }
               },
             ),
 
-            // FUNDS
-            _NavItem(
-              icon: Icons.account_balance_wallet_rounded,
-              label: 'Funds',
-              selected: selectedIndex == 2,
-
-              onTap: () {
-                // Funds screen will go here later
-              },
-            ),
-
-            // PROFILE
-            _NavItem(
+            _NavItem( // opens list of officers approved to edit on the system
               icon: Icons.person_rounded,
-              label: 'Profile',
-              selected: selectedIndex == 3,
+              label: 'Officers',
+              selected: selectedIndex == 2,
+              onTap: () async {
+                if (selectedIndex != 2) {
+                  await Navigator.push( // waits until the records screen is closed
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const ProfileScreen()),
+                  );
 
-              onTap: () {
-                // Profile screen will go here later
+                  if (onRefreshNeeded != null) onRefreshNeeded!(); // refreshes the dashboard after returning from records
+                }
               },
             ),
-          ], // children of Row
-        ), // Row
-      ), // Container
-    ); // SafeArea
-  } // build
-} // BottomNavBar
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-// navigation icons class
-class _NavItem extends StatelessWidget {
+class _NavItem extends StatelessWidget { // creates an individual item inside the bottom navigation bar
   final IconData icon;
   final String label;
   final bool selected;
@@ -911,38 +814,26 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return GestureDetector( // performs the navigation action when the item is tapped
       onTap: onTap,
-
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        children: [ // changes the icon color depending on the selected tab
+          Icon(icon,
+              color: selected ? lightBlue : Colors.white70, size: 22),
+          const SizedBox(height: 2),
 
-        children: [
-          Icon(
-            icon,
-            color: selected
-                ? lightBlue
-                : Colors.white.withOpacity(0.6),
-            size: 23,
-          ),
-
-          const SizedBox(height: 3),
-
-          Text(
+          Text( // highlights the label of the currently selected tab
             label,
             style: TextStyle(
               fontFamily: 'Space',
-              color: selected
-                  ? lightBlue
-                  : Colors.white.withOpacity(0.6),
-              fontSize: 9,
-              fontWeight: selected
-                  ? FontWeight.w700
-                  : FontWeight.w400,
+              fontSize: 10,
+              color: selected ? lightBlue : Colors.white70,
+              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
-        ], // children of Column
-      ), // Column
-    ); // GestureDetector
-  } // build
-} // _NavItem
+        ],
+      ),
+    );
+  }
+}

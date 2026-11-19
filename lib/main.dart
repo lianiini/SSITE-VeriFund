@@ -1,15 +1,32 @@
+
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dashboard.dart';
-import 'login.dart';
 
-// COLORS
-const Color mediumBlue = Color.fromARGB(255, 142, 177, 209);
+final supabase = Supabase.instance.client;
 
-void main() {
-  runApp(const MyApp());
-}
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
+  try {
+    await Supabase.initialize(
+      url: 'https://qiowgsswotoynbkyurqa.supabase.co',
+      publishableKey: 'sb_publishable__Exy8dw1tpZKQJb4CB4S2g_rzLhUaDl',
+    );
+      debugPrint('Supabase initialized successfully.');
+    } catch (error, stackTrace) {
+      debugPrint('Supabase initialization failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
+    runApp(const MyApp());
+  }
+
+
+// ======================================================
 // APP
+// ======================================================
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -17,62 +34,177 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
       theme: ThemeData(
         scaffoldBackgroundColor: beige,
       ),
-
       home: const ChoiceScreen(),
     );
   }
 }
 
-// CHOICE SCREEN
-class ChoiceScreen extends StatelessWidget {
+// ======================================================
+// LOADING SCREEN
+// ======================================================
+
+class ChoiceScreen extends StatefulWidget {
   const ChoiceScreen({super.key});
+
+  @override
+  State<ChoiceScreen> createState() => _ChoiceScreenState();
+}
+
+class _ChoiceScreenState extends State<ChoiceScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Automatically navigate to dashboard after 5 seconds
+    Future.delayed(const Duration(seconds: 5), () {
+
+      // Check if the screen is still active
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const DashboardScreen(),
+        ),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: beige,
+
       body: SafeArea(
         bottom: false,
+
         child: LayoutBuilder(
           builder: (context, constraints) {
+
             return SizedBox(
               width: constraints.maxWidth,
               height: constraints.maxHeight,
+
               child: Stack(
                 children: [
-                  // TOP BLUE HEADER (With 15px padding from edges)
+
+                  // ======================================
+                  // BOTTOM DARK BLUE CURVE
+                  // ======================================
+
                   Positioned(
-                    top: 5,
-                    left: 5,
-                    right: 5,
-                    child: Container(
-                      height: 213,
-                      decoration: const BoxDecoration(
-                        color: paleBlue,
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(20),
-                          bottomRight: Radius.circular(20),
-                        ),
+                    top: constraints.maxHeight * 0.8,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+
+                    child: ClipPath(
+                      clipper: BottomCurveClipper(),
+
+                      child: Container(
+                        color: darkBlue,
                       ),
                     ),
                   ),
 
-                  // SSITE
+                  // ======================================
+                  // DECORATIVE CIRCLES
+                  // ======================================
+
+                  // Top-left medium blue circle
+                  Positioned(
+                    top: 30,
+                    left: 30,
+
+                    child: _buildCircle(
+                      size: 60,
+                      color: mediumBlue,
+                    ),
+                  ),
+
+                  // Small top-left pale blue circle
+                  Positioned(
+                    top: 85,
+                    left: 15,
+
+                    child: _buildCircle(
+                      size: 30,
+                      color: paleBlue,
+                    ),
+                  ),
+
+                  // Upper-right medium blue circle
+                  Positioned(
+                    top: 50,
+                    right: -30,
+
+                    child: _buildCircle(
+                      size: 96,
+                      color: mediumBlue,
+                    ),
+                  ),
+
+                  // Small upper-right pale blue circle
+                  Positioned(
+                    top: 130,
+                    right: -10,
+
+                    child: _buildCircle(
+                      size: 38,
+                      color: paleBlue,
+                    ),
+                  ),
+
+                  // Lower-left medium blue circle
+                  Positioned(
+                    top: 220,
+                    left: -20,
+
+                    child: _buildCircle(
+                      size: 69,
+                      color: mediumBlue,
+                    ),
+                  ),
+
+                  // Pale blue decorative rectangle
+                  Positioned(
+                    top: 205,
+                    left: 90,
+
+                    child: Container(
+                      width: 250,
+                      height: 35,
+
+                      decoration: BoxDecoration(
+                        color: paleBlue,
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                  ),
+
+                  // ======================================
+                  // SSITE TITLE
+                  // ======================================
+
                   const Positioned(
                     top: 160,
                     left: 30,
+
                     child: Text(
                       'SSITE',
+
                       style: TextStyle(
                         fontFamily: 'Space',
-                        fontSize: 25,
+                        fontSize: 30,
                         fontWeight: FontWeight.bold,
                         color: darkBlue,
-                        letterSpacing: 7,
+                        letterSpacing: 9,
+
                         shadows: [
                           Shadow(
                             offset: Offset(3, 2),
@@ -83,69 +215,89 @@ class ChoiceScreen extends StatelessWidget {
                     ),
                   ),
 
-                  // VERIFUND
+                  // ======================================
+                  // VERIFUND TITLE
+                  // ======================================
+
                   const Positioned(
-                    top: 190,
-                    left: 45,
+                    top: 195,
+                    left: 22,
+
                     child: Text(
                       'VeriFund',
+
                       style: TextStyle(
                         fontFamily: 'Press',
-                        fontSize: 35,
+                        fontSize: 40,
                         color: darkBlue,
                       ),
                     ),
                   ),
 
+                  // ======================================
                   // LOGOS
+                  // ======================================
+
                   Positioned(
-                    top: 160,
-                    right: 30,
+                    top: 155,
+                    right: 25,
+
                     child: Row(
                       children: [
+
                         _buildCircleIcon(
                           Image.asset(
                             'lib/assets/MCC.png',
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.cover,
+                            width: 38,
+                            height: 38,
+                            fit: BoxFit.contain,
                           ),
                         ),
-                        const SizedBox(width: 5),
+
+                        const SizedBox(width: 8),
+
                         _buildCircleIcon(
                           Image.asset(
                             'lib/assets/ICS.png',
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.cover,
+                            width: 38,
+                            height: 38,
+                            fit: BoxFit.contain,
                           ),
                         ),
-                        const SizedBox(width: 5),
+
+                        const SizedBox(width: 8),
+
                         _buildCircleIcon(
                           Image.asset(
                             'lib/assets/SSITE.png',
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.cover,
+                            width: 38,
+                            height: 38,
+                            fit: BoxFit.contain,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  // "ARE YOU A..."
+                  // ======================================
+                  // WELCOME TEXT
+                  // ======================================
+
                   const Positioned(
-                    top: 267,
+                    top: 285,
                     left: 0,
                     right: 0,
+
                     child: Center(
                       child: Text(
-                        'are you a...',
+                        'Verify SSITE Funds?',
+
                         style: TextStyle(
                           fontFamily: 'Pixelify',
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 17,
                           color: darkBlue,
+
                           shadows: [
                             Shadow(
                               offset: Offset(2, 0),
@@ -157,48 +309,71 @@ class ChoiceScreen extends StatelessWidget {
                     ),
                   ),
 
-                  // SSITE BUTTON
-                  Positioned(
-                    top: 293,
-                    left: 30,
-                    child: _buildChoiceButton(
-                      text: 'SSITE',
-                      onTap: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                  // ======================================
+                  // LOADING INDICATOR
+                  // ======================================
 
-                  // STUDENT BUTTON
                   Positioned(
-                    top: 293,
-                    right: 30,
-                    child: _buildChoiceButton(
-                      text: 'Student',
-                      onTap: () {
-                        // TODO: Navigate to Student screen
-                      },
-                    ),
-                  ),
-
-                  // BOTTOM DARK BLUE SHAPE (EDGE-TO-EDGE & MAXIMIZED)
-                  Positioned(
-                    top: constraints.maxHeight * 0.62,
+                    top: 360,
                     left: 0,
                     right: 0,
-                    bottom: 0, // Fits flush to the bottom edge
-                    child: ClipPath(
-                      clipper: BottomCurveClipper(),
-                      child: Container(
-                        color: darkBlue,
-                      ),
+
+                    child: Column(
+                      children: [
+
+                        // Circular loading animation
+                        const SizedBox(
+                          width: 45,
+                          height: 45,
+
+                          child: CircularProgressIndicator(
+                            strokeWidth: 4,
+
+                            valueColor:
+                            AlwaysStoppedAnimation<Color>(
+                              darkBlue,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 22),
+
+                        // Loading text
+                        const Text(
+                          'Loading VeriFund...',
+
+                          style: TextStyle(
+                            fontFamily: 'Pixelify',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: darkBlue,
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Loading description
+                        const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 30,
+                          ),
+
+                          child: Text(
+                            'Please wait while we prepare your dashboard.',
+
+                            textAlign: TextAlign.center,
+
+                            style: TextStyle(
+                              fontFamily: 'Pixelify',
+                              fontSize: 10,
+                              color: darkBlue,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+
                 ],
               ),
             );
@@ -208,69 +383,51 @@ class ChoiceScreen extends StatelessWidget {
     );
   }
 
-  // LOGO CIRCLE
-  Widget _buildCircleIcon(Image image) {
-    return SizedBox(
-      width: 35,
-      height: 35,
-      child: image,
+  // ==========================================
+  // DECORATIVE CIRCLE
+  // ==========================================
+
+  Widget _buildCircle({
+    required double size,
+    required Color color,
+  }) {
+    return Container(
+      width: size,
+      height: size,
+
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+      ),
     );
   }
 
-  // CHOICE BUTTON
-  static Widget _buildChoiceButton({
-    required String text,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 135,
-        height: 130,
-        decoration: BoxDecoration(
-          color: lightBlue,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: Colors.black,
-            width: 3,
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black,
-              offset: Offset(6, 7),
-              blurRadius: 0,
-            ),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontFamily: 'Pixelify',
-              fontSize: 27,
-              fontWeight: FontWeight.bold,
-              color: darkBlue,
-            ),
-          ),
-        ),
-      ),
+  // ==========================================
+  // LOGO CIRCLE
+  // ==========================================
+
+  Widget _buildCircleIcon(Image image) {
+    return SizedBox(
+      width: 42,
+      height: 42,
+      child: image,
     );
   }
 }
 
+// ======================================================
 // BOTTOM CURVE
+// ======================================================
+
 class BottomCurveClipper extends CustomClipper<Path> {
+
   @override
   Path getClip(Size size) {
     Path path = Path();
 
-    // Start from bottom-left
     path.moveTo(0, size.height);
-
-    // Left side
     path.lineTo(0, 115);
 
-    // Large curved top
     path.quadraticBezierTo(
       size.width * 0.38,
       -10,
@@ -278,22 +435,18 @@ class BottomCurveClipper extends CustomClipper<Path> {
       35,
     );
 
-    // Right side
     path.lineTo(
       size.width,
       size.height,
     );
 
-    // Close shape
     path.close();
 
     return path;
   }
 
   @override
-  bool shouldReclip(
-      CustomClipper<Path> oldClipper,
-      ) {
+  bool shouldReclip(CustomClipper<Path> oldClipper) {
     return false;
   }
 }
